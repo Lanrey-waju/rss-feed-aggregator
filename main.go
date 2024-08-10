@@ -1,12 +1,19 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/Lanrey-waju/rss-feed-aggregator/internal/database"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
+
+type apiConfig struct {
+	DB *database.Queries
+}
 
 func main() {
 	err := godotenv.Load()
@@ -15,14 +22,35 @@ func main() {
 	}
 
 	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatal("PORT environment variable not set")
+	}
+	dbURL := os.Getenv("DBURL")
 
+	if dbURL == "" {
+		log.Fatal("DBURL environment variable not set")
+	}
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error connecting to databse: %v", err)
+	}
+
+	dbQueries := database.New(db)
+
+	apiCfg := apiConfig{
+		DB: dbQueries,
+	}
 	// start a new Servemux
 	mux := http.NewServeMux()
 
 	const filePathRoot = "localhost"
 
-	mux.HandleFunc("/v1/healthz", handlerReady)
-	mux.HandleFunc("/v1/err", handlerError)
+	mux.HandleFunc("POST /v1/users", apiCfg.handlerUsersCreate)
+	mux.HandleFunc("GET /v1/users", apiCfg.handlerUsersGet)
+
+	mux.HandleFunc("/v1/healthz", apiCfg.handlerReady)
+	mux.HandleFunc("/v1/err", apiCfg.handlerError)
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,
