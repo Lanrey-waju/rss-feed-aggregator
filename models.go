@@ -46,16 +46,9 @@ func databaseFeedToFeed(feed database.Feed) Feed {
 }
 
 func databaseFeedsToFeeds(feeds []database.Feed) []Feed {
-	respfeeds := []Feed{}
-	for _, feed := range feeds {
-		respfeeds = append(respfeeds, Feed{
-			ID:        feed.ID,
-			CreatedAt: feed.CreatedAt,
-			UpdatedAt: feed.UpdatedAt,
-			Name:      feed.Name,
-			Url:       feed.Url,
-			UserID:    feed.UserID,
-		})
+	respfeeds := make([]Feed, len(feeds))
+	for i, feed := range feeds {
+		respfeeds[i] = databaseFeedToFeed(feed)
 	}
 	return respfeeds
 
