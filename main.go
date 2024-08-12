@@ -47,7 +47,10 @@ func main() {
 	const filePathRoot = "localhost"
 
 	mux.HandleFunc("POST /v1/users", apiCfg.handlerUsersCreate)
-	mux.HandleFunc("GET /v1/users", apiCfg.handlerUsersGet)
+	mux.HandleFunc("GET /v1/users", apiCfg.middlewareAuth(apiCfg.handlerUsersGet))
+	// mux.Handle("GET /v1/users", middlewareAuthorize(apiCfg.handlerUsersGet))
+	mux.HandleFunc("POST /v1/feeds", apiCfg.middlewareAuth(apiCfg.handleCreateFeeds))
+	mux.HandleFunc("GET /v1/feeds", apiCfg.handleGetFeeds)
 
 	mux.HandleFunc("/v1/healthz", apiCfg.handlerReady)
 	mux.HandleFunc("/v1/err", apiCfg.handlerError)

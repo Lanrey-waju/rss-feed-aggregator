@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Lanrey-waju/rss-feed-aggregator/internal/auth"
 	"github.com/Lanrey-waju/rss-feed-aggregator/internal/database"
 	"github.com/google/uuid"
 )
@@ -36,23 +35,21 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondWithJson(w, http.StatusCreated, databseUserToUser(user))
+	respondWithJson(w, http.StatusCreated, databaseUserToUser(user))
 
 }
 
-func (cfg *apiConfig) handlerUsersGet(w http.ResponseWriter, r *http.Request) {
-	apiKey, err := auth.GetAPIKey(r.Header)
-	if err != nil {
-		log.Println(err)
-		respondWithError(w, http.StatusUnauthorized, "couldn't find an api key")
-		return
-	}
-
-	user, err := cfg.DB.GetUserByAPIKey(r.Context(), apiKey)
-	if err != nil {
-		respondWithError(w, http.StatusNotFound, "couldn't retrieve user")
-		return
-	}
-
-	respondWithJson(w, http.StatusOK, databseUserToUser(user))
+func (cfg *apiConfig) handlerUsersGet(w http.ResponseWriter, r *http.Request, user database.User) {
+	respondWithJson(w, http.StatusOK, databaseUserToUser(user))
 }
+
+// func (cfg *apiConfig) handlerUsersGet(w http.ResponseWriter, r *http.Request) {
+// 	apiKey := r.Context().Value("apikey").(string)
+// 	user, err := cfg.DB.GetUserByAPIKey(r.Context(), apiKey)
+// 	if err != nil {
+// 		respondWithError(w, http.StatusNotFound, "couldn't get user")
+// 		return
+// 	}
+
+// 	respondWithJson(w, http.StatusOK, databseUserToUser(user))
+// }
