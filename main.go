@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Lanrey-waju/rss-feed-aggregator/internal/database"
 	"github.com/joho/godotenv"
@@ -16,6 +17,7 @@ type apiConfig struct {
 }
 
 func main() {
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
@@ -41,6 +43,8 @@ func main() {
 	apiCfg := apiConfig{
 		DB: dbQueries,
 	}
+
+	go startScraping(apiCfg.DB, 10, 60*time.Second)
 	// start a new Servemux
 	mux := http.NewServeMux()
 
@@ -51,6 +55,9 @@ func main() {
 	// mux.Handle("GET /v1/users", middlewareAuthorize(apiCfg.handlerUsersGet))
 	mux.HandleFunc("POST /v1/feeds", apiCfg.middlewareAuth(apiCfg.handleCreateFeeds))
 	mux.HandleFunc("GET /v1/feeds", apiCfg.handleGetFeeds)
+	mux.HandleFunc("POST /v1/feed_follows", apiCfg.middlewareAuth(apiCfg.handleFeedFollow))
+	mux.HandleFunc("DELETE /v1/feed_follows/{feedFollowID}", apiCfg.middlewareAuth(apiCfg.handleDeleteFeedFollow))
+	mux.HandleFunc("GET /v1/feed_follows", apiCfg.middlewareAuth(apiCfg.handleGetUserFeedFollows))
 
 	mux.HandleFunc("/v1/healthz", apiCfg.handlerReady)
 	mux.HandleFunc("/v1/err", apiCfg.handlerError)
