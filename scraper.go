@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"io"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Lanrey-waju/rss-feed-aggregator/internal/database"
+	"github.com/google/uuid"
 )
 
 // Rss was generated 2024-08-13 22:25:32 by https://xml-to-go.github.io/ in Ukraine.
@@ -54,7 +56,7 @@ type RSSItem struct {
 
 func fetchFeed(url string) (*RSSFeed, error) {
 	httpClient := http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 15 * time.Second,
 	}
 	res, err := httpClient.Get(url)
 	if err != nil {
@@ -111,7 +113,34 @@ func scrapeFeed(db *database.Queries, wg *sync.WaitGroup, feed database.Feed) {
 	}
 
 	for _, item := range feedData.Channel.Item {
-		log.Println("Found post:", item.Title)
+		var pubDate time.Time
+		pubDate, err := time.Parse(time.RFC1123Z, item.PubDate)
+		if err != nil {
+			pubDate, err = time.Parse(time.RFC3339, item.PubDate)
+		}
+		if err != nil {
+			pubDate, err = time.Parse(time.RFC822Z, item.PubDate)
+		}
+		if err != nil {
+			log.Println("couldn.t parse published date string", err)
+		}
+		_, err = db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+			Title:     item.Title,
+			Url:       item.Link,
+			Description: sql.NullString{
+				String: item.Description,
+				Valid:  true,
+			},
+			PublishedAt: pubDate,
+			FeedID:      feed.ID,
+		})
+		if err != nil {
+			log.Printf("couldn't save post %v: Error: %v", item.Title, err)
+		}
+		log.Printf("Saved post: %s: %v", item.Title, item.Description)
 	}
 	log.Printf("Feed %s collected, %v posts found", feed.Name, len(feedData.Channel.Item))
 
